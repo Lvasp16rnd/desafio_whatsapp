@@ -7,13 +7,13 @@
 #   sudo systemctl reload caddy
 #
 # Pré-requisitos:
-#   1. DuckDNS: subdomínio "agente" apontando para o IP público da VM.
+#   1. DuckDNS: subdomínio "agenteautomacao" apontando para o IP público da VM.
 #   2. Security List da VM com as portas 80 e 443 liberadas.
 #
 # O Caddy emite o certificado Let's Encrypt automaticamente (HTTP-01) e
 # encaminha tudo para localhost:5678, que o túnel SSH reverso entrega no
 # n8n que roda no seu PC.
 
-agente.duckdns.org {
+agenteautomacao.duckdns.org {
     reverse_proxy localhost:5678
 }

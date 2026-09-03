@@ -54,7 +54,7 @@ A URL pública chega até o n8n local via **túnel SSH reverso** (`VM:5678 → P
 
 ## Pré-requisitos
 
-- Docker Desktop (Windows)
+- Docker Desktop (Windows) ou Docker no WSL2 (Ubuntu)
 - OpenSSH client (padrão no Windows 10+)
 - Contas/credenciais:
   - Meta Developer (app com use case **"Connect with customers through WhatsApp"**)
@@ -81,8 +81,10 @@ Copy-Item .env.example .env
 
 O script cria a rede Docker, sobe Redis e n8n, e abre a ponte SSH reversa no final (deixe o terminal aberto).
 
+> **Rodando no WSL2 (Ubuntu):** os comandos `docker` são os mesmos. Antes de usar a chave `.pem` no SSH, aplique `chmod 600 sua-chave.pem`. O `setup.ps1` é PowerShell — no terminal Ubuntu, execute os comandos `docker` equivalentes (rede → redis → n8n) manualmente.
+
 - Editor do n8n: http://localhost:5678
-- Webhook (via Caddy): https://`seu-subdomínio`.duckdns.org/webhook/whatsapp
+- Webhook (via Caddy): https://agenteautomacao.duckdns.org/webhook/whatsapp
 
 ### 3. Configurar o HTTPS na VM
 
@@ -97,12 +99,11 @@ sudo systemctl reload caddy
 No editor, **Import from File** → `n8n/workflow.json`. Depois:
 1. Criar a credencial **Redis** (host `redis`, porta `6379`).
 2. No nó **Open Ticket**, selecionar a planilha e mapear as colunas.
-3. No nó **Gemini STT/Vision**, colar o base64 da mídia (baixada no nó **Download Media**).
-4. Configurar a resposta do webhook para ecoar o `hub.challenge` (verificação da Meta).
+3. Configurar a resposta do webhook para ecoar o `hub.challenge` (verificação da Meta).
 
 ### 5. Registrar o webhook na Meta
 
-- URL: `https://`seu-subdomínio`.duckdns.org/webhook/whatsapp`
+- URL: `https://agenteautomacao.duckdns.org/webhook/whatsapp`
 - Verify token: o valor de `VERIFY_TOKEN`
 - Assinar os eventos `messages` e `media`.
 

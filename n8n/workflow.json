@@ -125,10 +125,49 @@
         "options": {}
       },
       "id": "5e55e555-5555-4555-8555-555555555555",
-      "name": "Download Media",
+      "name": "Get Media URL",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, -140]
+      "position": [880, -160]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.WHATSAPP_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "d1dd1ddd-4444-4444-8444-ddddddddddd4",
+      "name": "Download Binary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1100, -160]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst keys = Object.keys(item.binary || {});\nconst field = keys[0];\nconst file = (item.binary || {})[field] || {};\nreturn [{ json: { base64: file.data || '', mimeType: file.mimeType || 'audio/ogg' } }];"
+      },
+      "id": "d1dd1ddd-5555-4555-8555-ddddddddddd5",
+      "name": "To Base64",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, -160]
     },
     {
       "parameters": {
@@ -151,14 +190,14 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"contents\":[{\"parts\":[{\"text\":\"Transcreva o áudio ou descreva a imagem da ocorrência.\"},{\"inline_data\":{\"mime_type\":\"audio/ogg\",\"data\":\"COLE_AQUI_BASE64_DA_MIDIA\"}}]}]}",
+        "jsonBody": "={\"contents\":[{\"parts\":[{\"text\":\"Transcreva o áudio ou descreva a imagem da ocorrência.\"},{\"inline_data\":{\"mime_type\":\"{{ $('To Base64').first().json.mimeType }}\",\"data\":\"{{ $('To Base64').first().json.base64 }}\"}}]}]}",
         "options": {}
       },
       "id": "6f66f666-6666-4666-8666-666666666666",
       "name": "Gemini STT/Vision",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, -140]
+      "position": [1540, -160]
     },
     {
       "parameters": {
@@ -251,7 +290,7 @@
       "name": "Open Ticket",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [1100, 0]
+      "position": [1100, 20]
     },
     {
       "parameters": {
@@ -281,7 +320,7 @@
       "name": "Gemini Search",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, 200]
+      "position": [1100, 260]
     },
     {
       "parameters": {
@@ -341,16 +380,16 @@
     },
     {
       "parameters": {
-        "content": "TRATAMENTO DE MÍDIA (áudio/imagem)\n\nO WhatsApp entrega áudio/imagem como media_id.\n1. 'Download Media': GET graph.facebook.com/{media_id} (Authorization: Bearer token) → retorna a URL real do binário.\n2. Baixar o binário, codificar em base64 e enviar ao 'Gemini STT/Vision' via inline_data.\n3. O nó Gemini devolve { transcription } que alimenta a 'State Machine' (entrada index 1).\n\nAjustar: converter OGG/Opus se o Gemini rejeitar (ffmpeg). Para imagem, usar prompt de análise da ocorrência.",
-        "height": 240,
-        "width": 480,
+        "content": "TRATAMENTO DE MÍDIA (áudio/imagem) — já encadeado:\n1. 'Get Media URL': GET graph.facebook.com/{media_id} (Bearer token) → devolve a URL real do binário.\n2. 'Download Binary': GET dessa URL com Response Format = File.\n3. 'To Base64': converte o binário em base64 + mime_type.\n4. 'Gemini STT/Vision': envia via inline_data para transcrever/descrever.\n\nSe o 'Download Binary' importar sem o Response Format = File, selecione isso manualmente no nó. Para imagem, ajuste o prompt no 'Gemini STT/Vision'.",
+        "height": 260,
+        "width": 520,
         "color": 6
       },
       "id": "d1dd1ddd-2222-4222-8222-ddddddddddd2",
       "name": "Sticky - Midia",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [880, -360]
+      "position": [880, -380]
     },
     {
       "parameters": {
@@ -363,7 +402,7 @@
       "name": "Sticky - Estados",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
-      "position": [660, 360]
+      "position": [660, 380]
     }
   ],
   "connections": {
@@ -411,7 +450,7 @@
         ],
         [
           {
-            "node": "Download Media",
+            "node": "Get Media URL",
             "type": "main",
             "index": 0
           }
@@ -425,7 +464,29 @@
         ]
       ]
     },
-    "Download Media": {
+    "Get Media URL": {
+      "main": [
+        [
+          {
+            "node": "Download Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Binary": {
+      "main": [
+        [
+          {
+            "node": "To Base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "To Base64": {
       "main": [
         [
           {

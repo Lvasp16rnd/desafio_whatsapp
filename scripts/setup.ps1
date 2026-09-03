@@ -76,7 +76,6 @@ docker run -d --name n8n `
   -v n8n_data:/home/node/.n8n `
   -e N8N_SECURE_COOKIE=false `
   -e GENERIC_TIMEZONE=America/Sao_Paulo `
-  -e N8N_DEFAULT_BINARY_DATA_MODE=filesystem `
   -e WHATSAPP_TOKEN=$env:WHATSAPP_TOKEN `
   -e WHATSAPP_PHONE_ID=$env:PHONE_NUMBER_ID `
   -e WHATSAPP_VERIFY_TOKEN=$env:VERIFY_TOKEN `
@@ -93,11 +92,24 @@ Write-Host "Editor do n8n : http://localhost:5678"
 Write-Host "Webhook (via Caddy) : https://$env:DUCKDNS_SUBDOMAIN.duckdns.org/webhook/whatsapp"
 
 if (-not $SkipTunnel) {
-    $vmUser = if ($env:VM_USER) { $env:VM_USER } else { "opc" }
-    $vmHost = if ($env:VM_HOST) { $env:VM_HOST } else { "137.131.151.6" }
+    $vmUser = if ($env:VM_USER) { $env:VM_USER } else { "ubuntu" }
+    $vmHost = $env:VM_HOST
+    $sshKey = $env:VM_SSH_KEY
+
+    if (-not $vmHost) {
+        Write-Warning "VM_HOST vazio no .env. Abra a ponte SSH manualmente com:"
+        Write-Warning "  ssh -N -R 5678:localhost:5678 -i sua-chave.pem $vmUser@IP_DA_VM"
+        return
+    }
 
     Write-Step "Abrindo tunel SSH reverso para $vmUser@$vmHost"
     Write-Info "Deixe este terminal aberto durante a demonstracao. Ctrl+C para encerrar."
-    ssh -N -R 5678:localhost:5678 "$vmUser@$vmHost" `
-        -o ServerAliveInterval=30 -o ExitOnForwardFailure=yes
+    if ($sshKey) {
+        ssh -N -R 5678:localhost:5678 -i "$sshKey" "$vmUser@$vmHost" `
+            -o ServerAliveInterval=30 -o ExitOnForwardFailure=yes
+    } else {
+        Write-Warning "VM_SSH_KEY vazio; tentando sem chave (so funciona se houver outra autenticacao)."
+        ssh -N -R 5678:localhost:5678 "$vmUser@$vmHost" `
+            -o ServerAliveInterval=30 -o ExitOnForwardFailure=yes
+    }
 }
