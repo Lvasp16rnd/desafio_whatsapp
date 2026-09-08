@@ -28,3 +28,12 @@ Thumbs.db
 
 # Documento de escopo interno (nao versionar)
 DESAFIO1_ESCOPO.md
+
+# Notas de sessao / handoff (nao versionar)
+NOTAS_SESSAO.md
+
+# Workflow COM credenciais e URL da planilha real (nao versionar)
+n8n/workflow-corrigido.json
+
+# Capturas de tela / arquivos pessoais
+Captura de tela*.png
