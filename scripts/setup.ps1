@@ -75,6 +75,7 @@ docker run -d --name n8n `
   -p 127.0.0.1:5678:5678 `
   -v n8n_data:/home/node/.n8n `
   -e N8N_SECURE_COOKIE=false `
+  -e N8N_BLOCK_ENV_ACCESS_IN_NODE=false `
   -e GENERIC_TIMEZONE=America/Sao_Paulo `
   -e WHATSAPP_TOKEN=$env:WHATSAPP_TOKEN `
   -e WHATSAPP_PHONE_ID=$env:PHONE_NUMBER_ID `

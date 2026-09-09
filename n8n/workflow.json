@@ -1,29 +1,51 @@
 {
   "name": "Agente WhatsApp - Pre-atendimento",
-  "active": false,
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "POST",
+        "multipleMethods": true,
+        "httpMethod": "={{ [\"GET\",\"POST\"] }}",
         "path": "whatsapp",
-        "responseMode": "onReceived",
+        "responseMode": "responseNode",
         "options": {}
       },
-      "id": "1a11a111-1111-4111-8111-111111111111",
+      "id": "3a05c12e-e2b2-4daa-8c5d-d54aa85be97c",
       "name": "WhatsApp Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 0]
+      "position": [
+        -1360,
+        448
+      ],
+      "webhookId": "fb50263f-01d5-4a90-840b-db8bc5610a4b"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {}
+      },
+      "id": "3758cd50-8dd3-4d4a-b0ef-c007ec973c12",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -1360,
+        688
+      ]
     },
     {
       "parameters": {
         "jsCode": "const b = $json.body || $json;\nconst e = (b.entry || [])[0] || {};\nconst c = (e.changes || [])[0] || {};\nconst v = c.value || {};\nconst m = (v.messages || [])[0] || {};\nconst type = m.type || 'text';\nconst text = type === 'text' ? ((m.text || {}).body || '') : '';\nconst mediaId = (m.audio || {}).id || (m.image || {}).id || '';\nreturn [{ json: {\n  from: m.from || '',\n  name: ((v.contacts || [{}])[0].profile || {}).name || '',\n  type,\n  text,\n  mediaId,\n  timestamp: m.timestamp || ''\n} }];"
       },
-      "id": "2b22b222-2222-4222-8222-222222222222",
+      "id": "9100f50f-d3a3-4132-ad5f-27a5d18d483d",
       "name": "Parse Payload",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [220, 0]
+      "position": [
+        -1120,
+        432
+      ]
     },
     {
       "parameters": {
@@ -31,33 +53,40 @@
         "key": "={{ $('Parse Payload').first().json.from }}",
         "options": {}
       },
-      "id": "3c33c333-3333-4333-8333-333333333333",
+      "id": "6da77641-4f35-4405-a58d-685c029b37bf",
       "name": "Read State",
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
-      "position": [440, 0]
+      "position": [
+        -912,
+        432
+      ],
+      "credentials": {
+        "redis": {
+          "id": "REDIS_CREDENTIAL_ID",
+          "name": "Redis account"
+        }
+      }
     },
     {
       "parameters": {
         "rules": {
-          "rules": [
+          "values": [
             {
               "conditions": {
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "loose",
-                  "version": 2
+                  "typeValidation": "strict",
+                  "version": 1
                 },
                 "conditions": [
                   {
-                    "id": "a0a00000-0000-4000-8000-000000000001",
                     "leftValue": "={{ $('Parse Payload').first().json.type }}",
                     "rightValue": "text",
                     "operator": {
                       "type": "string",
-                      "operation": "equals",
-                      "singleValue": true
+                      "operation": "equals"
                     }
                   }
                 ],
@@ -69,28 +98,24 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "loose",
-                  "version": 2
+                  "typeValidation": "strict",
+                  "version": 1
                 },
                 "conditions": [
                   {
-                    "id": "a0a00000-0000-4000-8000-000000000002",
                     "leftValue": "={{ $('Parse Payload').first().json.type }}",
                     "rightValue": "audio",
                     "operator": {
                       "type": "string",
-                      "operation": "equals",
-                      "singleValue": true
+                      "operation": "equals"
                     }
                   },
                   {
-                    "id": "a0a00000-0000-4000-8000-000000000003",
                     "leftValue": "={{ $('Parse Payload').first().json.type }}",
                     "rightValue": "image",
                     "operator": {
                       "type": "string",
-                      "operation": "equals",
-                      "singleValue": true
+                      "operation": "equals"
                     }
                   }
                 ],
@@ -101,18 +126,20 @@
         },
         "options": {}
       },
-      "id": "4d44d444-4444-4444-8444-444444444444",
+      "id": "996971ea-7cff-4302-be32-0a2297254780",
       "name": "Route by Type",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
-      "position": [660, 0]
+      "position": [
+        -768,
+        528
+      ],
+      "alwaysOutputData": false
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "=https://graph.facebook.com/v19.0/{{ $('Parse Payload').first().json.mediaId }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "authentication": "none",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -124,18 +151,19 @@
         },
         "options": {}
       },
-      "id": "5e55e555-5555-4555-8555-555555555555",
+      "id": "d77130b9-6e15-4c04-ad2a-1fa75cfb4d24",
       "name": "Get Media URL",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, -160]
+      "position": [
+        -432,
+        192
+      ]
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "={{ $json.url }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "authentication": "none",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -153,28 +181,33 @@
           }
         }
       },
-      "id": "d1dd1ddd-4444-4444-8444-ddddddddddd4",
+      "id": "a55c6b36-2b7c-4a35-a544-fd4c857c5c05",
       "name": "Download Binary",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, -160]
+      "position": [
+        -256,
+        176
+      ]
     },
     {
       "parameters": {
         "jsCode": "const item = $input.first();\nconst keys = Object.keys(item.binary || {});\nconst field = keys[0];\nconst file = (item.binary || {})[field] || {};\nreturn [{ json: { base64: file.data || '', mimeType: file.mimeType || 'audio/ogg' } }];"
       },
-      "id": "d1dd1ddd-5555-4555-8555-ddddddddddd5",
+      "id": "2729ba23-09e1-4089-ae29-2796ca4392a0",
       "name": "To Base64",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, -160]
+      "position": [
+        -48,
+        224
+      ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{ $env.GEMINI_MODEL || 'gemini-2.0-flash' }}:generateContent",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "authentication": "none",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -190,42 +223,47 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"contents\":[{\"parts\":[{\"text\":\"Transcreva o áudio ou descreva a imagem da ocorrência.\"},{\"inline_data\":{\"mime_type\":\"{{ $('To Base64').first().json.mimeType }}\",\"data\":\"{{ $('To Base64').first().json.base64 }}\"}}]}]}",
+        "jsonBody": "={\\\"contents\\\":[{\\\"parts\\\":[{\\\"text\\\":\\\"Transcreva APENAS o conteúdo falado no áudio ou descreva somente a imagem. Não adicione introduções, títulos, saudações nem comentários. Responda somente com a transcrição/descrição.\\\"},{\\\"inline_data\\\":{\\\"mime_type\\\":\\\"{{ $('To Base64').first().json.mimeType }}\\\",\\\"data\\\":\\\"{{ $('To Base64').first().json.base64 }}\\\"}}]}]}",
         "options": {}
       },
-      "id": "6f66f666-6666-4666-8666-666666666666",
+      "id": "15ab0107-7595-4ad6-8f3b-95882ea64c82",
       "name": "Gemini STT/Vision",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1540, -160]
+      "position": [
+        -16,
+        368
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const p = $('Parse Payload').first().json;\nlet saved = {};\nconst s = $('Read State').first();\nif (s && s.json && s.json.state) { saved = s.json; }\nelse if (s && s.json && s.json.value) { try { saved = JSON.parse(s.json.value) || {}; } catch (err) { saved = {}; } }\n\nconst type = p.type;\nlet transcription = '';\nconst g = $('Gemini STT/Vision').first();\nif (g && g.json) { transcription = g.json.transcription || (g.json.candidates || [{}])[0]?.content?.parts?.[0]?.text || ''; }\nconst text = type === 'text' ? p.text : transcription;\n\nconst currentState = saved.state || 'SAUDACAO';\nconst data = saved.data || {};\nlet nextState = currentState;\nlet reply = '';\nlet openTicket = false;\nlet needSearch = false;\n\nif (currentState === 'SAUDACAO') {\n  reply = 'Olá! Sou o assistente virtual. Para abrir seu chamado, envie um ÁUDIO com seu Nome, E-mail e Celular. Você também pode enviar imagem ou áudio da ocorrência.';\n  nextState = 'COLETA';\n} else if (currentState === 'COLETA') {\n  if (data.nome && data.email && data.celular) {\n    reply = 'Confirma os dados? Nome: ' + data.nome + ' | E-mail: ' + data.email + ' | Celular: ' + data.celular + '. Responda SIM para abrir o chamado ou NÃO para corrigir.';\n    nextState = 'CONFIRMACAO';\n  } else {\n    data.nome = data.nome || text;\n    reply = 'Recebi! Continue enviando os dados que faltam (Nome, E-mail e Celular).';\n    nextState = 'COLETA';\n  }\n} else if (currentState === 'CONFIRMACAO') {\n  if (String(text).toLowerCase().indexOf('sim') === 0) {\n    openTicket = true;\n    reply = 'Chamado aberto! Aguarde, um atendente humano entrará em contato. Se tiver alguma dúvida agora, pode me perguntar.';\n    nextState = 'CHAMADO';\n  } else {\n    reply = 'Sem problemas! Envie novamente um áudio com Nome, E-mail e Celular.';\n    nextState = 'COLETA';\n  }\n} else if (currentState === 'CHAMADO') {\n  needSearch = true;\n  nextState = 'ATENDIMENTO';\n  reply = 'Vou buscar uma resposta para sua dúvida...';\n} else if (currentState === 'ATENDIMENTO') {\n  if (String(text).toLowerCase().indexOf('sim') === 0) {\n    reply = 'Ótimo! Fico feliz em ajudar. Até logo!';\n    nextState = 'ENCERRADO';\n  } else {\n    needSearch = true;\n    nextState = 'ATENDIMENTO';\n    reply = 'Vou buscar novamente...';\n  }\n}\n\nreturn [{ json: { from: p.from, type, text, state: nextState, reply, openTicket, needSearch, data, stateJson: JSON.stringify({ state: nextState, data }) } }];"
+        "jsCode": "const p = $('Parse Payload').first().json;\nlet saved = {};\nconst s = $('Read State').first();\nif (s && s.json) {\n  const raw = s.json.state || s.json.value || s.json.propertyName;\n  if (raw) {\n    if (typeof raw === 'string') { try { saved = JSON.parse(raw) || {}; } catch (e) { saved = {}; } }\n    else { saved = raw; }\n  }\n}\n\nconst type = p.type;\nlet transcription = '';\nif (type !== 'text') {\n  const g = $('Gemini STT/Vision').first();\n  if (g && g.json) { transcription = g.json.transcription || (g.json.candidates || [{}])[0]?.content?.parts?.[0]?.text || ''; }\n}\nconst text = type === 'text' ? p.text : transcription;\n\nfunction extrairEmail(t) {\n  const m = (t || '').match(/[\\w.+-]+@[\\w-]+\\.[\\w.-]+/);\n  return m ? m[0] : '';\n}\nfunction extrairCelular(t) {\n  const m = (t || '').match(/(\\+?\\d{2}[\\s.-]?)?(?:\\(?(\\d{2})\\)?[\\s.-]?)?(9?\\s?\\d{4}[\\s.-]?\\d{4}|\\d{4}[\\s.-]?\\d{4})/);\n  return m ? m[0].trim() : '';\n}\nfunction extrairNome(t, email, celular) {\n  let nome = '';\n  const m = (t || '').match(/(?:meu nome [ée]|sou(?: o| a)?|nome[:\\s]+)([^,.]+)/i);\n  if (m) { nome = m[1].trim(); }\n  if (!nome) {\n    const corte = (t || '').split(/[,.|]/)[0] || '';\n    nome = corte\n      .replace(/(meu nome [ée]|sou(?: o| a)?|meu email[^,]*|meu celular[^,]*|meu número[^,]*|celular[^,]*|email[^,]*)/gi, ' ')\n      .replace(email, ' ').replace(celular, ' ').replace(/\\s{2,}/g, ' ').trim();\n    if (nome.length < 3 || /\\d/.test(nome) && !/[a-zA-ZÀ-ÿ]/.test(nome)) { nome = ''; }\n  }\n  return nome;\n}\n\nconst currentState = saved.state || 'SAUDACAO';\nconst data = saved.data || { nome: '', email: '', celular: '', ocorrencia: '' };\nlet nextState = currentState;\nlet reply = '';\nlet openTicket = false;\nlet needSearch = false;\n\nif (currentState === 'SAUDACAO') {\n  reply = 'Olá! Sou o assistente virtual. Para abrir seu chamado, envie um ÁUDIO com seu Nome, E-mail e Celular. Você também pode digitá-los.';\n  nextState = 'COLETA';\n} else if (currentState === 'COLETA') {\n  const email = extrairEmail(text);\n  const celular = extrairCelular(text);\n  const nome = extrairNome(text, email, celular);\n  if (email) { data.email = email; }\n  if (celular) { data.celular = celular; }\n  if (nome) { data.nome = nome; }\n\n  const faltando = [];\n  if (!data.nome) { faltando.push('Nome'); }\n  if (!data.email) { faltando.push('E-mail'); }\n  if (!data.celular) { faltando.push('Celular'); }\n\n  if (faltando.length === 0) {\n    reply = 'Recebi! Confirme os dados: Nome: ' + data.nome + ' | E-mail: ' + data.email + ' | Celular: ' + data.celular + '. Responda SIM se estiver correto.';\n    nextState = 'CONFIRMACAO';\n  } else {\n    reply = 'Ainda falta: ' + faltando.join(', ') + '. Envie em um áudio ou digite, por favor.';\n    nextState = 'COLETA';\n  }\n} else if (currentState === 'CONFIRMACAO') {\n  if (String(text).toLowerCase().indexOf('sim') === 0) {\n    reply = 'Ótimo! Agora me conte qual é o problema. Envie um áudio, uma imagem ou digite a descrição da ocorrência.';\n    nextState = 'PROBLEMA';\n  } else {\n    data.nome = ''; data.email = ''; data.celular = '';\n    reply = 'Sem problemas! Envie novamente seu Nome, E-mail e Celular.';\n    nextState = 'COLETA';\n  }\n} else if (currentState === 'PROBLEMA') {\n  const limpo = String(text).replace(/^(meu problema [ée]|o problema [ée]|preciso|eu)/i, '').trim();\n  if (limpo.length >= 3) { data.ocorrencia = limpo; }\n  openTicket = true;\n  reply = 'Chamado aberto! Registramos sua ocorrência e um atendente humano entrará em contato. Aguarde.';\n  nextState = 'CHAMADO';\n} else if (currentState === 'CHAMADO') {\n  needSearch = true;\n  nextState = 'ATENDIMENTO';\n  reply = 'Vou buscar uma resposta para sua dúvida...';\n} else if (currentState === 'ATENDIMENTO') {\n  if (String(text).toLowerCase().indexOf('sim') === 0) {\n    reply = 'Ótimo! Fico feliz em ajudar. Até logo!';\n    nextState = 'ENCERRADO';\n  } else {\n    needSearch = true;\n    nextState = 'ATENDIMENTO';\n    reply = 'Vou buscar novamente...';\n  }\n}\n\nreturn [{ json: { from: p.from, type, text, state: nextState, reply, openTicket, needSearch, data, stateJson: JSON.stringify({ state: nextState, data }) } }];"
       },
-      "id": "7a77a777-7777-4777-8777-777777777777",
+      "id": "997fa1e5-90aa-4577-940b-6bf1480c7876",
       "name": "State Machine",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, 140]
+      "position": [
+        -448,
+        592
+      ]
     },
     {
       "parameters": {
         "rules": {
-          "rules": [
+          "values": [
             {
               "conditions": {
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "loose",
-                  "version": 2
+                  "typeValidation": "strict",
+                  "version": 1
                 },
                 "conditions": [
                   {
-                    "id": "b0b00000-0000-4000-8000-000000000001",
                     "leftValue": "={{ $json.openTicket }}",
-                    "rightValue": true,
+                    "rightValue": "",
                     "operator": {
                       "type": "boolean",
                       "operation": "true",
@@ -241,14 +279,13 @@
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
-                  "typeValidation": "loose",
-                  "version": 2
+                  "typeValidation": "strict",
+                  "version": 1
                 },
                 "conditions": [
                   {
-                    "id": "b0b00000-0000-4000-8000-000000000002",
                     "leftValue": "={{ $json.needSearch }}",
-                    "rightValue": true,
+                    "rightValue": "",
                     "operator": {
                       "type": "boolean",
                       "operation": "true",
@@ -261,43 +298,120 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Fallback"
+        }
       },
-      "id": "8b88b888-8888-4888-8888-888888888888",
+      "id": "68179ea7-8ac2-4a5e-b80f-352b279adb00",
       "name": "Route by State",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
-      "position": [880, 140]
+      "position": [
+        -176,
+        592
+      ]
     },
     {
       "parameters": {
         "operation": "append",
-        "documentId": "=SEU_SHEET_ID_AQUI",
-        "sheetName": "Chamados",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "SUA_PLANILHA_URL_AQUI",
+          "__regex": "https:\\/\\/(?:drive|docs)\\.google\\.com(?:\\/.*|)\\/d\\/([0-9a-zA-Z\\-_]+)(?:\\/.*|)"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Chamados"
+        },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "nome": "={{ $('State Machine').first().json.data.nome }}",
-            "email": "={{ $('State Machine').first().json.data.email }}",
-            "celular": "={{ $('State Machine').first().json.data.celular }}",
-            "ocorrencia": "={{ $('State Machine').first().json.data.texto || $('State Machine').first().json.text }}",
-            "status": "aberto"
-          }
+            "Nome": "={{ $('State Machine').first().json.data.nome }}",
+            "E-mail": "={{ $('State Machine').first().json.data.email }}",
+            "Celular": "={{ $('State Machine').first().json.data.celular }}",
+            "Ocorrência": "={{ $('State Machine').first().json.data.ocorrencia || $('State Machine').first().json.text }}",
+            "Status": "aberto"
+          },
+          "schema": [
+            {
+              "id": "Nome",
+              "displayName": "Nome",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "E-mail",
+              "displayName": "E-mail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Celular",
+              "displayName": "Celular",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Ocorrência",
+              "displayName": "Ocorrência",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
         },
         "options": {}
       },
-      "id": "9c99c999-9999-4999-8999-999999999999",
+      "id": "a5d3fd9f-8568-436b-85fc-35b485a5f90c",
       "name": "Open Ticket",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [1100, 20]
+      "position": [
+        208,
+        512
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{ $env.GEMINI_MODEL || 'gemini-2.0-flash' }}:generateContent",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{ $env.GEMINI_MODEL || 'gemini-3.6-flash' }}:generateContent",
+        "authentication": "none",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -313,21 +427,23 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"contents\":[{\"parts\":[{\"text\":\"Responda a dúvida do usuário usando informações de fontes públicas: {{ $('State Machine').first().json.text }}\"}]}],\"tools\":[{\"google_search\":{}}]}",
+        "jsonBody": "={\"contents\":[{\"parts\":[{\"text\":\"Um usuário abriu um chamado de suporte. Ocorrência registrada: {{ $('State Machine').first().json.data.ocorrencia || $('State Machine').first().json.text }}. Agora ele perguntou: {{ $('State Machine').first().json.text }}. Responda de forma clara e direta em português, usando informações de fontes públicas quando relevante.\"}]}],\"tools\":[{\"google_search\":{}}]}",
         "options": {}
       },
-      "id": "adaaadaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "id": "307cf65e-166c-4d41-aa4e-a51ed5463cfd",
       "name": "Gemini Search",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1100, 260]
+      "position": [
+        128,
+        752
+      ]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "=https://graph.facebook.com/v19.0/{{ $env.WHATSAPP_PHONE_ID }}/messages",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
+        "authentication": "none",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -343,71 +459,68 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"messaging_product\":\"whatsapp\",\"to\":\"{{ $('State Machine').first().json.from }}\",\"type\":\"text\",\"text\":{\"body\":\"{{ $('State Machine').first().json.reply }}\"}}",
+        "jsonBody": "={\"messaging_product\":\"whatsapp\",\"to\":\"{{ $('Format Reply').first().json.from }}\",\"type\":\"text\",\"text\":{\"body\":\"{{ $('Format Reply').first().json.reply }}\"}}",
         "options": {}
       },
-      "id": "bebebbeb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "id": "adcce01b-5720-4400-a582-19c8fa6eafd3",
       "name": "Send Reply",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, 140]
+      "position": [
+        368,
+        624
+      ]
     },
     {
       "parameters": {
         "operation": "set",
-        "key": "={{ $('State Machine').first().json.from }}",
-        "value": "={{ $('State Machine').first().json.stateJson }}",
-        "options": {}
+        "key": "={{ $('Format Reply').first().json.from }}",
+        "value": "={{ $('Format Reply').first().json.stateJson }}"
       },
-      "id": "cececcec-cccc-4ccc-8ccc-cccccccccccc",
+      "id": "daf37009-be7a-409d-a1be-07fab2432644",
       "name": "Save State",
       "type": "n8n-nodes-base.redis",
       "typeVersion": 1,
-      "position": [1540, 140]
+      "position": [
+        592,
+        624
+      ],
+      "credentials": {
+        "redis": {
+          "id": "REDIS_CREDENTIAL_ID",
+          "name": "Redis account"
+        }
+      }
     },
     {
       "parameters": {
-        "content": "AGENTE WHATSAPP — PRÉ-ATENDIMENTO\n\nFluxo: Webhook → Parse → Read State (Redis) → roteia por tipo (texto/mídia) → State Machine → roteia por estado (ticket/busca/padrão) → Send Reply → Save State (Redis).\n\nCONFIGURAR ANTES DE RODAR:\n1. Credencial Redis: host 'redis', porta 6379 (mesma rede docker 'agente-net').\n2. Variáveis de ambiente (no container n8n): WHATSAPP_TOKEN, WHATSAPP_PHONE_ID, WHATSAPP_VERIFY_TOKEN, GEMINI_API_KEY, GEMINI_MODEL.\n3. Google Sheets: selecionar a planilha e mapear colunas no nó 'Open Ticket'.\n4. Webhook Meta: na verificação (GET) responder o hub.challenge de volta.",
-        "height": 320,
-        "width": 560,
-        "color": 5
+        "jsCode": "const sm = $('State Machine').first().json || {};\nlet reply = sm.reply || '';\nconst inp = $input.first();\nconst j = (inp && inp.json) || {};\nif (j.candidates) {\n  const cand = (j.candidates || [{}])[0];\n  const txt = cand && cand.content ? (cand.content.parts || [{}])[0].text : '';\n  if (txt) { reply = txt; }\n}\nreturn [{ json: {\n  from: sm.from,\n  reply,\n  text: sm.text,\n  state: sm.state,\n  stateJson: sm.stateJson,\n  data: sm.data || {}\n} }];"
       },
-      "id": "d1dd1ddd-1111-4111-8111-ddddddddddd1",
-      "name": "Sticky - Visao geral",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [-220, -200]
-    },
-    {
-      "parameters": {
-        "content": "TRATAMENTO DE MÍDIA (áudio/imagem) — já encadeado:\n1. 'Get Media URL': GET graph.facebook.com/{media_id} (Bearer token) → devolve a URL real do binário.\n2. 'Download Binary': GET dessa URL com Response Format = File.\n3. 'To Base64': converte o binário em base64 + mime_type.\n4. 'Gemini STT/Vision': envia via inline_data para transcrever/descrever.\n\nSe o 'Download Binary' importar sem o Response Format = File, selecione isso manualmente no nó. Para imagem, ajuste o prompt no 'Gemini STT/Vision'.",
-        "height": 260,
-        "width": 520,
-        "color": 6
-      },
-      "id": "d1dd1ddd-2222-4222-8222-ddddddddddd2",
-      "name": "Sticky - Midia",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [880, -380]
-    },
-    {
-      "parameters": {
-        "content": "ESTADOS (chave = 'from' no Redis):\nSAUDACAO → pede áudio com dados → COLETA\nCOLETA → coleta/transcreve → CONFIRMACAO\nCONFIRMACAO → SIM: CHAMADO | NÃO: COLETA\nCHAMADO → abre ticket + orienta aguardar humano → ATENDIMENTO\nATENDIMENTO → busca pública (grounding) em loop → ENCERRADO\n\nBusca pública: nó 'Gemini Search' usa tools:[{google_search:{}}].\nLGPD: usar TTL no Redis e não logar dados pessoais.",
-        "height": 260,
-        "width": 480,
-        "color": 4
-      },
-      "id": "d1dd1ddd-3333-4333-8333-ddddddddddd3",
-      "name": "Sticky - Estados",
-      "type": "n8n-nodes-base.stickyNote",
-      "typeVersion": 1,
-      "position": [660, 380]
+      "id": "ffff0000-0000-4000-9000-f0000000aaaa",
+      "name": "Format Reply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        500
+      ]
     }
   ],
   "connections": {
     "WhatsApp Webhook": {
       "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Parse Payload",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Parse Payload",
@@ -537,9 +650,9 @@
         ],
         [
           {
-            "node": "Send Reply",
+            "node": "Format Reply",
             "type": "main",
-            "index": 2
+            "index": 0
           }
         ]
       ]
@@ -548,7 +661,7 @@
       "main": [
         [
           {
-            "node": "Send Reply",
+            "node": "Format Reply",
             "type": "main",
             "index": 0
           }
@@ -559,9 +672,9 @@
       "main": [
         [
           {
-            "node": "Send Reply",
+            "node": "Format Reply",
             "type": "main",
-            "index": 1
+            "index": 0
           }
         ]
       ]
@@ -571,6 +684,17 @@
         [
           {
             "node": "Save State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Reply": {
+      "main": [
+        [
+          {
+            "node": "Send Reply",
             "type": "main",
             "index": 0
           }
