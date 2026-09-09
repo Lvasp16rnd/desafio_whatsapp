@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar dependências
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Validar JSON do workflow n8n
+        run: |
+          python -c "import json; json.load(open('n8n/workflow.json', encoding='utf-8')); print('workflow.json OK')"
+
+      - name: Checar sintaxe dos scripts
+        run: |
+          python -m py_compile scripts/*.py
+          echo "scripts OK"
+
+      - name: Rodar testes
+        run: pytest -q
+
+      - name: Verificar segredos acidentais no workflow
+        run: |
+          # garante que o template não contém tokens/chaves/URL real de planilha
+          if grep -rE "EAA|AIza|AQ\.|sk-[A-Za-z0-9]|docs\.google\.com/spreadsheets" n8n/workflow.json; then
+            echo "::error::Possível segredo encontrado em n8n/workflow.json"
+            exit 1
+          fi
+          echo "nenhum segredo detectado"
