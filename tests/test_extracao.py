@@ -98,3 +98,27 @@ def test_confirmação_nao_limpa_dados():
     reply, estado, dados = sim._estado_local("CONFIRMACAO", "nao", dados)
     assert estado == "COLETA"
     assert dados["nome"] == "" and dados["email"] == "" and dados["celular"] == ""
+
+
+def test_chamar_gemini_nao_estoura_quando_servico_indisponivel(monkeypatch):
+    """Se o Gemini falhar (503/quota/instabilidade), a função NÃO lança exceção.
+
+    Cenário real da apresentação: o Gemini retorna 503 (alta demanda) e o
+    script estourava com traceback. Agora deve devolver uma mensagem amigável.
+    """
+    import urllib.error
+
+    # simula GEMINI_API_KEY presente
+    monkeypatch.setattr(sim, "GEMINI_API_KEY", "chave-fake")
+
+    # faz urlopen sempre lançar 503
+    def _fake_urlopen(*args, **kwargs):
+        raise urllib.error.HTTPError(
+            "http://fake", 503, "Service Unavailable", None, None
+        )
+
+    monkeypatch.setattr(sim.urllib.request, "urlopen", _fake_urlopen)
+
+    resultado = sim._chamar_gemini({"contents": [{"parts": [{"text": "oi"}]}]})
+    assert isinstance(resultado, str)
+    assert "indisponivel" in resultado  # mensagem amigável, não exceção

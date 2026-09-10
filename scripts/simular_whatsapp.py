@@ -57,6 +57,15 @@ GEMINI_URL = (
     "{model}:generateContent"
 )
 
+# Modelos tentados em sequência (fallback): se um estiver com alta demanda
+# (503) ou sem cota (429), o próximo é tentado. Aumenta muito a resiliência
+# em demonstrações, pois o Gemini às vezes fica instável.
+GEMINI_MODELS_FALLBACK = [
+    os.getenv("GEMINI_MODEL", "gemini-3.6-flash"),
+    "gemini-3.5-flash",
+    "gemini-flash-latest",
+]
+
 
 def _carregar_env_local() -> None:
     """Se GEMINI_API_KEY nao estiver no ambiente, tenta ler do .env do projeto."""
@@ -90,10 +99,51 @@ def _carregar_env_local() -> None:
 # ---------------------------------------------------------------------------
 # Transcricao (STT/Vision) — igual ao no "Gemini STT/Vision" do n8n
 # ---------------------------------------------------------------------------
-def transcrever(caminho: str) -> str:
-    if not GEMINI_API_KEY:
-        return f"[sem GEMINI_API_KEY - nao transcrevi: {caminho}]"
+def _chamar_gemini(payload: dict, tentativas: int = 2) -> str:
+    """Chama o Gemini com fallback de modelos e retry. Nunca lança exceção.
 
+    Retorna o texto gerado ou uma mensagem amigável em caso de falha
+    (quota esgotada, alta demanda, etc.).
+    """
+    if not GEMINI_API_KEY:
+        return "[sem GEMINI_API_KEY no ambiente nem no .env]"
+
+    ultimo_erro = ""
+    for modelo in GEMINI_MODELS_FALLBACK:
+        url = GEMINI_URL.format(model=modelo) + f"?key={GEMINI_API_KEY}"
+        for tentativa in range(tentativas):
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode(),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    data = json.loads(resp.read().decode())
+                texto = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                if texto:
+                    return texto
+                ultimo_erro = "resposta vazia"
+            except urllib.error.HTTPError as e:
+                if e.code == 404:
+                    # modelo descontinuado -> pula direto pro próximo
+                    ultimo_erro = f"modelo {modelo} indisponivel (404)"
+                    break
+                ultimo_erro = f"HTTP {e.code}"
+            except Exception as e:  # noqa: BLE001
+                ultimo_erro = str(e)
+            if tentativa < tentativas - 1:
+                import time
+                time.sleep(1.0)
+
+    return (
+        "O servico de IA esta temporariamente indisponivel "
+        f"({ultimo_erro}). Tente novamente em instantes."
+    )
+
+
+def transcrever(caminho: str) -> str:
     mime, _ = mimetypes.guess_type(caminho)
     if mime is None:
         mime = "audio/ogg"
@@ -112,20 +162,7 @@ def transcrever(caminho: str) -> str:
         ]
     }
 
-    url = GEMINI_URL.format(model=GEMINI_MODEL) + f"?key={GEMINI_API_KEY}"
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=120) as resp:
-        data = json.loads(resp.read().decode())
-
-    try:
-        return data["candidates"][0]["content"]["parts"][0]["text"].strip()
-    except (KeyError, IndexError):
-        return f"[resposta inesperada do Gemini: {data}]"
+    return _chamar_gemini(payload)
 
 
 def _buscar_resposta(duvida: str, dados: dict) -> str:
@@ -144,23 +181,7 @@ def _buscar_resposta(duvida: str, dados: dict) -> str:
         "contents": [{"parts": [{"text": prompt}]}],
         "tools": [{"google_search": {}}],
     }
-    url = GEMINI_URL.format(model=GEMINI_MODEL) + f"?key={GEMINI_API_KEY}"
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(payload).encode(),
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            data = json.loads(resp.read().decode())
-        return data["candidates"][0]["content"]["parts"][0]["text"].strip()
-    except urllib.error.HTTPError as e:
-        if e.code == 429:
-            return "Estou sem cota de consulta no momento. Tente novamente em instantes."
-        return f"[erro {e.code} ao consultar a base]"
-    except Exception as e:  # noqa: BLE001
-        return f"[erro ao consultar a base: {e}]"
+    return _chamar_gemini(payload)
 
 
 # ---------------------------------------------------------------------------
